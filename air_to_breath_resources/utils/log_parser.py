@@ -32,7 +32,7 @@ class LogReader:
                 log = self.log_socket.recv(2 ** 16)
                 log = log[4:]
                 log = pickle.loads(log)
-                self.buffer += log['msg']
+                self.buffer += log['msg'] + '\n'
 
             except socket.timeout:
                 pass
@@ -48,12 +48,12 @@ class LogReader:
         del self.buffer
         self.buffer = ''
 
-    def search_log(self, regex):
-        res = re.search(regex, self.buffer)
-        if res is not None:
-            return res.group()
+    def search(self, regex):
+        res = re.findall(regex, self.buffer)
+        if len(res) > 0:
+            return res[-1]
 
     def wait_for_log(self, regex, timeout=10, timeout_seconds=1):
-        return waiting.wait(lambda: self.search_log(regex) is not None,
+        return waiting.wait(lambda: self.search(regex) is not None,
                             timeout_seconds=timeout,
                             sleep_seconds=timeout_seconds)

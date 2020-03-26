@@ -81,40 +81,71 @@ class BaseSensor:
             self.thread = None
 
 
-class SocketSensor(BaseSensor):
+class SocketSensor:
     LOW_BOUND = 0
     HIGH_BOUND = 5
 
     def __init__(self, host, port):
-        super().__init__()
         self.host = host
         self.port = port
+
+        self.low_bound = self.LOW_BOUND
+        self.high_bound = self.HIGH_BOUND
+
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    def send_values(self, sent_value: int):
-        data = str(sent_value).encode()
-        self.socket.sendto(data, (self.host, self.port))
+    def set_value(self, sent_value: int):
+        if sent_value is None:
+            data = (self.HIGH_BOUND + self.LOW_BOUND) / 2
+
+        else:
+            data = sent_value
+
+        data_encoded = str(data).encode()
+
+        self.socket.sendto(data_encoded, (self.host, self.port))
+        return data
+
+    @property
+    def name(self):
+        raise NotImplemented
 
 
-class PressureSensor(BaseSensor):
+class PressureSensor(SocketSensor):
+    LOW_BOUND = 0.3
+    HIGH_BOUND = 26.5
+
+    @property
+    def name(self):
+        return 'pressure'
+
+
+class FlowSensor(SocketSensor):
+    LOW_BOUND = -0.5
+    HIGH_BOUND = 14.5
+
+    @property
+    def name(self):
+        return 'flow'
+
+    def set_value(self, sent_value: int):
+        if sent_value is None:
+            data = (self.HIGH_BOUND + self.LOW_BOUND) / 2
+
+        else:
+            data = sent_value
+
+        data_encoded = str(data / 1000).encode()
+
+        self.socket.sendto(data_encoded, (self.host, self.port))
+        return data
+
+
+
+class OxygenSensor(SocketSensor):
     LOW_BOUND = 0
     HIGH_BOUND = 5
 
-    def send_values(self):
-        pass
-
-
-class FlowSensor(BaseSensor):
-    LOW_BOUND = 0
-    HIGH_BOUND = 5
-
-    def send_values(self):
-        pass
-
-
-class OxygenSensor(BaseSensor):
-    LOW_BOUND = 0
-    HIGH_BOUND = 5
-
-    def send_values(self):
-        pass
+    @property
+    def name(self):
+        return 'oxygen'

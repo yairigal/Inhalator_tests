@@ -3,7 +3,9 @@ import socket
 PORT = 5555
 
 
-class HcePressureSensor:
+# THIS CODE SHOULD BE EXACTLY LIKE THE REMOTE DRIVER API
+
+class MockHcePressureSensor:
     def __init__(self):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -11,11 +13,15 @@ class HcePressureSensor:
         self._socket.bind(('0.0.0.0', PORT))
         self._socket.settimeout(0)
 
+        self.value = 0
+
     def read_pressure(self):
         try:
             val = float(self._socket.recv(2 ** 16))
-            print(f'pressure={val}')
-            return val
+            self.value = val
 
         except BlockingIOError:
-            return 0
+            pass
+
+        finally:
+            return self.value

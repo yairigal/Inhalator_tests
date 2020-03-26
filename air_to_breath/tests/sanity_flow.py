@@ -1,28 +1,31 @@
 from rotest.core.flow import TestFlow
-from rotest.core.flow_component import MODE_FINALLY
+from rotest.core.flow_component import Pipe
 
-from air_to_breath2.blocks.blocks import ClearBuffer, ValidateSensors, \
-    StartSensorSimulation, StopSensorSimulation
+from air_to_breath.blocks.blocks import ClearBuffer
+from air_to_breath.blocks.blocks import InitializeSensorValuesBlock
+from air_to_breath.blocks.blocks import ValidateSensors
 from air_to_breath_resources.resources import AirToBreathSetup
 
 
 class AbstractSensorFlow(TestFlow):
     __test__ = False
 
-    blocks = [ClearBuffer,
-              StartSensorSimulation,
-              ValidateSensors,
-              StopSensorSimulation.params(mode=MODE_FINALLY)]
+    blocks = [
+        InitializeSensorValuesBlock,
+
+        ClearBuffer,
+        ValidateSensors
+    ]
 
 
 class SanityFlow(TestFlow):
     setup = AirToBreathSetup.request()
 
-    common = {'sent_values': [3]}
-
-    blocks = [AbstractSensorFlow.params(sensors=[setup.pressure]),
-              AbstractSensorFlow.params(sensors=[setup.flow]),
-              AbstractSensorFlow.params(sensors=[setup.oxygen])]
+    blocks = [
+        AbstractSensorFlow.params(sensors=Pipe('setup', lambda setup: [setup.pressure])),
+        AbstractSensorFlow.params(sensors=Pipe('setup', lambda setup: [setup.flow])),
+        # AbstractSensorFlow.params(sensors=[setup.oxygen])
+    ]
 
 
 class UpperBoundFlow(TestFlow):
@@ -30,9 +33,11 @@ class UpperBoundFlow(TestFlow):
 
     common = {'sent_values': [7]}
 
-    blocks = [AbstractSensorFlow.params(sensors=[setup.pressure]),
-              AbstractSensorFlow.params(sensors=[setup.flow]),
-              AbstractSensorFlow.params(sensors=[setup.oxygen])]
+    blocks = [
+        AbstractSensorFlow.params(sensors=Pipe('setup', lambda setup: [setup.pressure])),
+        AbstractSensorFlow.params(sensors=Pipe('setup', lambda setup: [setup.flow])),
+        # AbstractSensorFlow.params(sensors=[setup.oxygen])
+    ]
 
 
 class LowBoundFlow(TestFlow):
@@ -40,6 +45,8 @@ class LowBoundFlow(TestFlow):
 
     common = {'sent_values': [-3]}
 
-    blocks = [AbstractSensorFlow.params(sensors=[setup.pressure]),
-              AbstractSensorFlow.params(sensors=[setup.flow]),
-              AbstractSensorFlow.params(sensors=[setup.oxygen])]
+    blocks = [
+        AbstractSensorFlow.params(sensors=Pipe('setup', lambda setup: [setup.pressure])),
+        AbstractSensorFlow.params(sensors=Pipe('setup', lambda setup: [setup.flow])),
+        # AbstractSensorFlow.params(sensors=[setup.oxygen])
+    ]

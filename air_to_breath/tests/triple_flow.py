@@ -17,6 +17,7 @@ class AbstractTripleSensorFlow(TestFlow):
               StopSensorSimulation.params(mode=MODE_FINALLY)]
 
 
+
 def create_scenarios(setup):
     sensors = [setup.pressure, setup.flow, setup.oxygen]
     scenarios = []

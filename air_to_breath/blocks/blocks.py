@@ -1,12 +1,19 @@
+from itertools import cycle
+
 from rotest.core.block import TestBlock
-from rotest.core.flow_component import BlockInput, BlockOutput
+from rotest.core.flow_component import BlockInput
+from rotest.core.flow_component import BlockOutput
 
-from air_to_breath_resources.utils.sensor import PressureSensor, FlowSensor, OxygenSensor
-from air_to_breath_resources.utils.Validator import PressureValidator, FlowValidator, OxygenValidator
+from air_to_breath_resources.utils.sensor import PressureSensor
+from air_to_breath_resources.utils.sensor import FlowSensor
+from air_to_breath_resources.utils.sensor import OxygenSensor
+from air_to_breath_resources.utils.Validator import PressureValidator
+from air_to_breath_resources.utils.Validator import FlowValidator
+from air_to_breath_resources.utils.Validator import OxygenValidator
 
-SENSOR_TO_VALIDATE = {PressureSensor: PressureValidator,
-                      FlowSensor: FlowValidator,
-                      OxygenSensor: OxygenValidator}
+SENSOR_TO_VALIDATE = {'pressure': PressureValidator,
+                      'flow': FlowValidator,
+                      'oxygen': OxygenValidator}
 
 
 class ClearBuffer(TestBlock):
@@ -14,6 +21,19 @@ class ClearBuffer(TestBlock):
 
     def test_method(self):
         self.setup.log_reader.clear_buffer()
+
+
+class InitializeSensorValuesBlock(TestBlock):
+    sensors = BlockInput()
+    sent_values = BlockInput(default=cycle([None]))
+
+    expected_values = BlockOutput()
+
+    def test_method(self):
+        self.expected_values = {}
+        for sensor, sent_value in zip(self.sensors, self.sent_values):
+            value = sensor.set_value(sent_value)
+            self.expected_values[sensor] = value
 
 
 class StartSensorSimulation(TestBlock):
@@ -26,6 +46,7 @@ class StartSensorSimulation(TestBlock):
 
     def test_method(self):
         self.expected_values = {}
+        # TODO zip longest?
         for sensor, sent_value, low_value, high_value in zip(self.sensors,
                                                              self.sent_values,
                                                              self.low_values,
@@ -41,8 +62,8 @@ class ChangeSensorValueSimulation(TestBlock):
 
     def test_method(self):
         for sensor, sensor_value in zip(self.sensors, self.sensor_values):
-            sensor.change_sensor_value(sensor_value)
-            self.expected_values[sensor] = sensor
+            sensor.set_value(sensor_value)
+            self.expected_values[sensor] = sensor_value
 
 
 class UpperCrossSensorValue(TestBlock):
@@ -53,7 +74,7 @@ class UpperCrossSensorValue(TestBlock):
         for sensor in self.sensors:
             new_value = sensor.high_bound + 1
             self.expected_values[sensor] = new_value
-            sensor.change_sensor_value(new_value)
+            sensor.set_value(new_value)
 
 
 class LowerCrossSensorValue(TestBlock):
@@ -64,7 +85,7 @@ class LowerCrossSensorValue(TestBlock):
         for sensor in self.sensors:
             new_value = sensor.low_bound - 1
             self.expected_values[sensor] = new_value
-            sensor.change_sensor_value(new_value)
+            sensor.set_value(new_value)
 
 
 class NormalizeSensorValue(TestBlock):
@@ -93,7 +114,7 @@ class ValidateSensors(TestBlock):
 
     def test_method(self):
         for sensor, expected_value in zip(self.sensors, self.expected_values):
-            validator = SENSOR_TO_VALIDATE[sensor]
+            validator = SENSOR_TO_VALIDATE[sensor.name]
             expected_value = self.expected_values[sensor]
             valid, error = validator.validate(expected_value,
                                               sensor.low_bound,
@@ -101,5 +122,3 @@ class ValidateSensors(TestBlock):
                                               self.setup.log_reader)
 
             self.assertTrue(valid, error)
-
-
