@@ -91,8 +91,9 @@ class SocketSensor(BaseSensor):
         self.port = port
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    def send_values(self, sent_value):
-        self.socket.sendto(sent_value, (self.host, self.port))
+    def send_values(self, sent_value: int):
+        data = str(sent_value).encode()
+        self.socket.sendto(data, (self.host, self.port))
 
 
 class PressureSensor(BaseSensor):

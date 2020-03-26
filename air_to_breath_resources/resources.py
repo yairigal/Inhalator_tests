@@ -48,12 +48,25 @@ class AirToBreathSetup(BaseResource):
         self.logger.info('Connecting to RP through SSH')
         self.ssh = SSH(self.RPI_IP, self.RP_USER, self.RP_PASSWORD)
 
+    def copy_driver(self):
+        # rename old_drivers
+        self.ssh.execute(f'mv {self.REMOTE_PRESSURE_DRIVER} {self.OLD_PRESSURE_NAME}')
+        # copy new drivers with old drivers name
+        self.ssh.copy(str(self.LOCAL_PRESSURE_DRIVER), str(self.REMOTE_PRESSURE_DRIVER))
+
     def _copy_drivers_to_remote(self):
         self.logger.debug('copying new drivers to remote')
         # rename old_drivers
         self.ssh.execute(f'mv {self.REMOTE_PRESSURE_DRIVER} {self.OLD_PRESSURE_NAME}')
         # copy new drivers with old drivers name
         self.ssh.copy(str(self.LOCAL_PRESSURE_DRIVER), str(self.REMOTE_PRESSURE_DRIVER))
+
+        # rename old_drivers
+        self.ssh.execute(f'mv {self.REMOTE_FLOW_DRIVER} {self.OLD_FLOW_NAME}')
+        # copy new drivers with old drivers name
+        self.ssh.copy(str(self.LOCAL_FLOW_DRIVER), str(self.REMOTE_FLOW_DRIVER))
+
+        # TODO add copy of oxygen sensor
 
     def _recover_drivers(self):
         self.logger.debug("recovering drivers")
@@ -66,6 +79,7 @@ class AirToBreathSetup(BaseResource):
 
     def start_program(self):
         return self.ssh.execute(self.START_CMD, wait=False)
+        # TODO add wait here
 
     def stop_program(self):
         return self.ssh.execute(self.STOP_CMD, wait=False)
