@@ -1,9 +1,12 @@
 from rotest.core.flow import TestFlow
 from rotest.core.flow_component import MODE_FINALLY
 
-from air_to_breath2.blocks.blocks import ClearBuffer, ValidateSensors, \
-    StartSensorSimulation, StopSensorSimulation, UpperCrossSensorValue, \
-    NormalizeSensorValue, LowerCrossSensorValue
+from air_to_breath.blocks.blocks import ClearBuffer
+from air_to_breath.blocks.blocks import NormalizeSensorValue
+from air_to_breath.blocks.blocks import StartSensorSimulation
+from air_to_breath.blocks.blocks import StopSensorSimulation
+from air_to_breath.blocks.blocks import UpperCrossSensorValue
+from air_to_breath.blocks.blocks import ValidateSensors
 from air_to_breath_resources.resources import AirToBreathSetup
 
 

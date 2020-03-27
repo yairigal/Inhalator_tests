@@ -1,0 +1,5 @@
+SENSORS = [
+    'pressure',
+    'flow',
+    # 'oxygen'
+]
