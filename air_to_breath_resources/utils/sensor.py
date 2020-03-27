@@ -84,6 +84,7 @@ class BaseSensor:
 class SocketSensor:
     LOW_BOUND = 0
     HIGH_BOUND = 5
+    VALUE_TEMPLATE = NotImplemented
 
     def __init__(self, host, port):
         self.host = host
@@ -114,6 +115,7 @@ class SocketSensor:
 class PressureSensor(SocketSensor):
     LOW_BOUND = 0.3
     HIGH_BOUND = 26.5
+    VALUE_TEMPLATE = "Pressure: (.*)"
 
     @property
     def name(self):
@@ -123,6 +125,7 @@ class PressureSensor(SocketSensor):
 class FlowSensor(SocketSensor):
     LOW_BOUND = -0.5
     HIGH_BOUND = 14.5
+    VALUE_TEMPLATE = "Flow: (.*)"
 
     @property
     def name(self):
@@ -135,16 +138,16 @@ class FlowSensor(SocketSensor):
         else:
             data = sent_value
 
-        data_encoded = str(data / 1000).encode()
+        data_encoded = str(data).encode()
 
         self.socket.sendto(data_encoded, (self.host, self.port))
         return data
 
 
-
 class OxygenSensor(SocketSensor):
     LOW_BOUND = 0
     HIGH_BOUND = 5
+    VALUE_TEMPLATE = "WRONGLINE"
 
     @property
     def name(self):

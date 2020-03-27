@@ -1,7 +1,7 @@
 """All air_to_breath2 project resources."""
-import time
 from pathlib import Path
 
+import waiting
 from rotest.management.base_resource import BaseResource
 
 from air_to_breath_resources.utils.log_parser import LogReader
@@ -12,19 +12,21 @@ from air_to_breath_resources.utils.ssh import SSH
 
 
 class AirToBreathSetup(BaseResource):
-    RPI_IP = "169.254.163.124"
+    RPI_IP = "192.168.43.165"
 
     RP_USER = 'pi'
     RP_PASSWORD = 'raspberry'
 
     REPO = Path('/home/pi/Inhalator')
-    START_CMD = 'export DISPLAY=:0 && python3 /home/pi/Inhalator/main.py -vvv &> /tmp/atb_log'
+    LOG_FILE_PATH = Path('/tmp/atb_log')
+    CMD_LABEL = f'python3 {REPO}/main.py -vvv -s'
+    START_CMD = f'export DISPLAY=:0 && {CMD_LABEL} &> {LOG_FILE_PATH} &'
     STOP_CMD = 'pkill -f python3'
 
     REMOTE_DRIVERS_PATH = REPO / 'drivers' / 'mocks'
-    REMOTE_PRESSURE_DRIVER = REMOTE_DRIVERS_PATH / 'mock_hce_pressure_sensor.py'
-    REMOTE_FLOW_DRIVER = REMOTE_DRIVERS_PATH / 'mock_sfm3200_flow_sensor.py'
-    REMOTE_OXYGEN_DRIVER = ''  # TODO need to add when they are done
+    REMOTE_PRESSURE_DRIVER = REMOTE_DRIVERS_PATH / 'mock_pressure_sensor.py'
+    REMOTE_FLOW_DRIVER = REMOTE_DRIVERS_PATH / 'mock_air_flow_sensor.py'
+    REMOTE_OXYGEN_DRIVER = REMOTE_DRIVERS_PATH / ''  # TODO need to add when they are done
 
     OLD_PRESSURE_NAME = REMOTE_DRIVERS_PATH / 'pressure_old'
     OLD_FLOW_NAME = REMOTE_DRIVERS_PATH / 'flow_old'
@@ -40,16 +42,17 @@ class AirToBreathSetup(BaseResource):
     FLOW_PORT = 6666
     OXYGEN_PORT = 7777
 
-    def __init__(self, **kwargs):
+    def __init__(self, host=None, **kwargs):
         super().__init__(**kwargs)
+        self.host = host if host is not None else self.RPI_IP
         self.log_reader = LogReader()
 
-        self.pressure = PressureSensor(self.RPI_IP, self.PRESSURE_PORT)
-        self.flow = FlowSensor(self.RPI_IP, self.FLOW_PORT)
-        self.oxygen = OxygenSensor(self.RPI_IP, self.OXYGEN_PORT)
+        self.pressure = PressureSensor(self.host, self.PRESSURE_PORT)
+        self.flow = FlowSensor(self.host, self.FLOW_PORT)
+        self.oxygen = OxygenSensor(self.host, self.OXYGEN_PORT)
 
         self.logger.info('Connecting to RP through SSH')
-        self.ssh = SSH(self.RPI_IP, self.RP_USER, self.RP_PASSWORD)
+        self.ssh = SSH(self.host, self.RP_USER, self.RP_PASSWORD)
 
     def copy_pressure(self):
         # rename old_drivers
@@ -71,7 +74,6 @@ class AirToBreathSetup(BaseResource):
 
     def _copy_drivers_to_remote(self):
         self.logger.debug('copying new drivers to remote')
-        # rename old_drivers
         self.copy_pressure()
         self.copy_flow()
         # TODO add copy of oxygen sensor
@@ -79,29 +81,38 @@ class AirToBreathSetup(BaseResource):
 
     def _recover_drivers(self):
         self.logger.debug("recovering drivers")
+        # pressure
         self.ssh.execute(f'mv {self.OLD_PRESSURE_NAME} {self.REMOTE_PRESSURE_DRIVER}')
+        self.ssh.execute(f'rm {self.OLD_PRESSURE_NAME}')
+        # flow
         self.ssh.execute(f'mv {self.OLD_FLOW_NAME} {self.REMOTE_FLOW_DRIVER}')
+        self.ssh.execute(f'rm {self.OLD_FLOW_NAME}')
+
 
     def connect(self):
         self.logger.debug("Starting log reader")
         self.log_reader.start_logger()
         self._copy_drivers_to_remote()
 
-        self.logger.info("Starting program")
-        self.start_program()
+    def is_online(self):
+        out, err = self.ssh.execute('ps aux -T | '  # show all process and threads
+                                    'grep -v grep | '  # remove grep cmds
+                                    'grep -v bash | '  # remove the ssh complex cmd
+                                    f'grep "{self.CMD_LABEL}" | '  # search for the specific process
+                                    f'wc -l')  # count instances
+        return int(out.decode().strip()) == 3  # all threads are up
 
     def start_program(self):
         out, err = self.ssh.execute(self.START_CMD, wait=False)
-        # TODO add wait here
-        time.sleep(5)
+        waiting.wait(self.is_online, timeout_seconds=10, sleep_seconds=1)
         return out, err
 
     def stop_program(self):
-        return self.ssh.execute(self.STOP_CMD, wait=False)
+        self.ssh.execute(self.STOP_CMD)
+        waiting.wait(lambda: not self.is_online())
 
     def finalize(self):
         self.logger.info("stopping program")
-        self.stop_program()
 
         self._recover_drivers()
 

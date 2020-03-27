@@ -4,7 +4,7 @@ PORT = 6666
 
 # THIS CODE SHOULD BE EXACTLY LIKE THE REMOTE DRIVER API
 
-class MockSfm3200:
+class MockAirFlowSensor:
     def __init__(self):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

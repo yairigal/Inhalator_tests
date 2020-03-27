@@ -8,7 +8,7 @@ from cached_property import cached_property
 
 
 class LogReader:
-    PORT = 8888
+    PORT = 7777
     SOCKET_TIMEOUT = 2
 
     def __init__(self):
