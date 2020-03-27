@@ -1,77 +1,39 @@
-from itertools import combinations
+from itertools import product
 
 from rotest.core.flow import TestFlow
 from rotest.core.flow_component import MODE_FINALLY
-from rotest.core.flow_component import Pipe
 
-from air_to_breath.blocks.blocks import ClearBuffer
-from air_to_breath.blocks.blocks import InitializeSensorValuesBlock
-from air_to_breath.blocks.blocks import SetSensorsValues
-from air_to_breath.blocks.blocks import StartProgram
-from air_to_breath.blocks.blocks import StopProgram
-from air_to_breath.blocks.blocks import ValidateSensors
-from air_to_breath.tests.common import SENSORS
+from air_to_breath.blocks.blocks import StartProgram, ClearBuffer, \
+    ValidateSensors, ValidateSensorsError, StopProgram
 from air_to_breath_resources.resources import AirToBreathSetup
 
 
 class AbstractSanityFlow(TestFlow):
     __test__ = False
 
-    setup = AirToBreathSetup.request()
+    blocks = [StartProgram,
+              ClearBuffer,
+              ValidateSensors,
+              ValidateSensorsError,
+              StopProgram.params(mode=MODE_FINALLY)]
 
-    blocks = [
-        InitializeSensorValuesBlock,
-        StartProgram,
 
-        ClearBuffer,
-        SetSensorsValues,
-        ValidateSensors,
+def create_scenarios(setup):
+    sensors = [setup.pressure, setup.flow, setup.oxygen]
+    scenarios = []
+    for sensor in sensors:
+        low_bound = sensor.low_bound - 1
+        high_bound = sensor.high_bound + 1
+        legal = (sensor.low_bound + sensor.high_bound) / 2.0
+        scenarios.append([(sensor, legal), (sensor, low_bound), (sensor, high_bound)])
 
-        StopProgram.params(mode=MODE_FINALLY)
-    ]
+    for scenario in product(*scenarios):
+        yield scenario
 
 
 class SanityFlow(TestFlow):
     setup = AirToBreathSetup.request()
 
-    blocks = [
-        AbstractSanityFlow.params(sensors=['pressure']),
-        AbstractSanityFlow.params(sensors=['flow']),
-        # AbstractSensorFlow.params(sensors=[setup.oxygen])
-    ]
-
-
-class UpperBoundFlow(TestFlow):
-    setup = AirToBreathSetup.request()
-
-    common = {'sent_values': [7]}
-
-    blocks = [
-        AbstractSanityFlow.params(sensors=['pressure']),
-        AbstractSanityFlow.params(sensors=['flow']),
-        # AbstractSensorFlow.params(sensors=[setup.oxygen])
-    ]
-
-
-class LowBoundFlow(TestFlow):
-    setup = AirToBreathSetup.request()
-
-    common = {'sent_values': [-3]}
-
-    blocks = [
-        AbstractSanityFlow.params(sensors=['pressure']),
-        AbstractSanityFlow.params(sensors=['flow']),
-        # AbstractSensorFlow.params(sensors=[setup.oxygen])
-    ]
-
-
-class PairsSanityFlow(TestFlow):
-    setup = AirToBreathSetup.request()
-
-    blocks = [AbstractSanityFlow.params(sensors=[s1, s2]) for s1, s2 in combinations(SENSORS, 2)]
-
-
-class TripletsSanityFlow(TestFlow):
-    setup = AirToBreathSetup.request()
-
-    blocks = [AbstractSanityFlow.params(sensors=[s1, s2]) for s1, s2 in combinations(SENSORS, 3)]
+    blocks = [AbstractSanityFlow.params(sensors=[s1[0], s2[0], s3[0]],
+                                        sent_values=[s1[1], s2[1], s3[1]])
+              for s1, s2, s3 in create_scenarios(setup)]
