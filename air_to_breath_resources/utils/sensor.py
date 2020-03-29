@@ -95,19 +95,13 @@ class SocketSensor:
 
     def __init__(self):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        json_cfg = self.json_configuration()
+        self.low_bound = json_cfg['threshold'][self.name]['min']
+        self.high_bound = json_cfg['threshold'][self.name]['max']
 
-    @property
     def json_configuration(self):
         with open(self.CONFIG_PATH) as f:
             return json.load(f)
-
-    @property
-    def low_bound(self):
-        return self.json_configuration['threshold'][self.name]['min']
-
-    @property
-    def high_bound(self):
-        return self.json_configuration['threshold'][self.name]['max']
 
     def set_value(self, sent_value: int, host, port):
         if sent_value is None:
