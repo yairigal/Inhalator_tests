@@ -85,8 +85,6 @@ class BaseSensor:
 
 
 class SocketSensor:
-    SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
     CONFIG_PATH = Path(os.getenv('PYTHONPATH')) / 'air_to_breath' / 'configs' / 'config.json'
 
     ERROR_TEMPLATE = NotImplemented
@@ -94,6 +92,9 @@ class SocketSensor:
 
     def name(self):
         return NotImplemented
+
+    def __init__(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     @property
     def _config_json(self):
@@ -108,7 +109,6 @@ class SocketSensor:
     def high_bound(self):
         return self._config_json['threshold'][self.name]['max']
 
-    @classmethod
     def set_value(self, sent_value: int, host, port):
         if sent_value is None:
             data = (self.high_bound + self.low_bound) / 2
@@ -118,7 +118,7 @@ class SocketSensor:
 
         data_encoded = str(data).encode()
 
-        self.SOCKET.sendto(data_encoded, (host, port))
+        self.socket.sendto(data_encoded, (host, port))
         return data
 
     def check_error(self, value):
