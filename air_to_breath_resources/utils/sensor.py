@@ -85,6 +85,7 @@ class SocketSensor:
     LOW_BOUND = 0
     HIGH_BOUND = 5
     VALUE_TEMPLATE = NotImplemented
+    ERROR_TEMPLATE = NotImplemented
 
     def __init__(self, host, port):
         self.host = host
@@ -106,6 +107,10 @@ class SocketSensor:
 
         self.socket.sendto(data_encoded, (self.host, self.port))
         return data
+
+    def check_error(self, value):
+        """Check if there should be an error."""
+        return not self.low_bound <= value <= self.high_bound
 
     @property
     def name(self):

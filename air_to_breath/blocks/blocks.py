@@ -11,8 +11,11 @@ from air_to_breath_resources.resources import AirToBreathSetup
 class StartProgram(TestBlock):
     setup: AirToBreathSetup = BlockInput()
 
+    expected_values = BlockOutput()
+
     def test_method(self):
         self.setup.start_program()
+        self.expected_values = {}
 
 
 class StopProgram(TestBlock):
@@ -22,19 +25,11 @@ class StopProgram(TestBlock):
         self.setup.stop_program()
 
 
-
 class ClearBuffer(TestBlock):
     setup = BlockInput()
 
     def test_method(self):
         self.setup.log_reader.clear_buffer()
-
-
-class InitializeSensorValuesBlock(TestBlock):
-    expected_values = BlockOutput()
-
-    def test_method(self):
-        self.expected_values = {}
 
 
 class SetSensorsValues(TestBlock):
@@ -49,25 +44,6 @@ class SetSensorsValues(TestBlock):
             sensor_obj = getattr(self.setup, sensor)
             value = sensor_obj.set_value(sent_value)
             self.expected_values[sensor] = value
-
-
-class StartSensorSimulation(TestBlock):
-    sensors = BlockInput()
-    sent_values = BlockInput(default=None)
-    low_values = BlockInput(default=None)
-    high_values = BlockInput(default=None)
-
-    expected_values = BlockOutput()
-
-    def test_method(self):
-        self.expected_values = {}
-        # TODO zip longest?
-        for sensor, sent_value, low_value, high_value in zip(self.sensors,
-                                                             self.sent_values,
-                                                             self.low_values,
-                                                             self.high_values):
-            sensor.start_simulate(sent_value, low_value, high_value)
-            self.expected_values[sensor] = sensor.sent_value
 
 
 class ChangeSensorValueSimulation(TestBlock):
@@ -114,14 +90,6 @@ class NormalizeSensorValue(TestBlock):
             sensor.change_sensor_value(new_value)
 
 
-class StopSensorSimulation(TestBlock):
-    sensors = BlockInput()
-
-    def test_method(self):
-        for sensor in self.sensors:
-            sensor.stop_simulate()
-
-
 class ValidateSensors(TestBlock):
     setup: AirToBreathSetup = BlockInput()
     sensors: list = BlockInput()
@@ -138,3 +106,19 @@ class ValidateSensors(TestBlock):
         for sensor, expected_value in self.expected_values.items():
             expected_value = self.expected_values[sensor]
             self.validate(sensor, expected_value)
+
+
+class ValidateSensorsError(TestBlock):
+    setup: AirToBreathSetup = BlockInput()
+    sensors: list = BlockInput()
+
+    def validate(self, sensor):
+        template = sensor.ERROR_TEMPLATE
+
+        value = self.setup.log_reader.search(template)
+        self.assertIsNotNone(value, f"Couldnt find {sensor} log line")
+
+    def test_method(self):
+        for sensor, expected_value in self.expected_values.items():
+            if sensor.check_error(expected_value):
+                self.validate(sensor)
