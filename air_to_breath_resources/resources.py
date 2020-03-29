@@ -43,7 +43,7 @@ class AirToBreathSetup(BaseResource):
     SENSOR_TO_PORT = {
         'pressure': 5555,
         'flow': 6666,
-        'oxygen': 7778
+        'oxygen': 7777
     }
 
     def __init__(self, host=None, **kwargs):
