@@ -1,19 +1,17 @@
 """All air_to_breath2 project resources."""
+import json
+import os
 from pathlib import Path
 
 import waiting
 from rotest.management.base_resource import BaseResource
 
+from air_to_breath.tests.common import SENSORS
 from air_to_breath_resources.utils.log_parser import LogReader
-from air_to_breath_resources.utils.sensor import FlowSensor
-from air_to_breath_resources.utils.sensor import OxygenSensor
-from air_to_breath_resources.utils.sensor import PressureSensor
 from air_to_breath_resources.utils.ssh import SSH
 
 
 class AirToBreathSetup(BaseResource):
-    RPI_IP = "169.254.212.216"
-
     RP_USER = 'pi'
     RP_PASSWORD = 'raspberry'
 
@@ -39,21 +37,30 @@ class AirToBreathSetup(BaseResource):
     LOCAL_FLOW_DRIVER = LOCAL_DRIVERS / 'flow_sensor.py'
     LOCAL_OXYGEN_DRIVER = LOCAL_DRIVERS / 'oxygen_sensor.py'
 
-    PRESSURE_PORT = 5555
-    FLOW_PORT = 6666
-    OXYGEN_PORT = 7777
+    OLD_CONFIG_FILE = REPO / 'old_config'
+    REMOTE_CONFIG_FILE = REPO / 'config.json'
+
+    SENSOR_TO_PORT = {
+        'pressure': 5555,
+        'flow': 6666,
+        'oxygen': 7778
+    }
 
     def __init__(self, host=None, **kwargs):
         super().__init__(**kwargs)
-        self.host = host if host is not None else self.RPI_IP
-        self.log_reader = LogReader()
-
-        self.pressure = PressureSensor(self.host, self.PRESSURE_PORT)
-        self.flow = FlowSensor(self.host, self.FLOW_PORT)
-        self.oxygen = OxygenSensor(self.host, self.OXYGEN_PORT)
+        self.host = host if host is not None else self.config['ip']
+        self.log_reader = LogReader(self.config['debug_port'])
 
         self.logger.info('Connecting to RP through SSH')
         self.ssh = SSH(self.host, self.RP_USER, self.RP_PASSWORD)
+
+    def set_value(self, sensor, value):
+        SENSORS[sensor].set_value(value, self.host, self.SENSOR_TO_PORT[sensor])
+        return value
+
+    def recover_config(self):
+        self.ssh.execute(f'mv {self.OLD_CONFIG_FILE} {self.REMOTE_CONFIG_FILE}')
+        self.ssh.execute(f'rm {self.OLD_CONFIG_FILE}')
 
     def copy_pressure(self):
         # rename old_drivers
@@ -82,6 +89,7 @@ class AirToBreathSetup(BaseResource):
 
     def _recover_drivers(self):
         self.logger.debug("recovering drivers")
+        self.recover_config()
         # pressure
         self.ssh.execute(f'mv {self.OLD_PRESSURE_NAME} {self.REMOTE_PRESSURE_DRIVER}')
         self.ssh.execute(f'rm {self.OLD_PRESSURE_NAME}')
@@ -92,7 +100,6 @@ class AirToBreathSetup(BaseResource):
     def connect(self):
         self.logger.debug("Starting log reader")
         self.log_reader.start_logger()
-        self._copy_drivers_to_remote()
 
     def is_online(self):
         out, err = self.ssh.execute('ps aux -T | '  # show all process and threads
@@ -102,19 +109,32 @@ class AirToBreathSetup(BaseResource):
                                     f'wc -l')  # count instances
         return int(out.decode().strip()) == 3  # all threads are up
 
+    def _copy_config(self):
+        self.ssh.execute(f'mv {self.REMOTE_CONFIG_FILE} {self.OLD_CONFIG_FILE}')
+        tmp_file = Path(__file__).parent / 'tmp_config.json'
+        with open(tmp_file, 'w') as f:
+            json.dump(dict(self.config), f, indent=4)
+
+        self.ssh.copy(str(tmp_file), str(self.REMOTE_CONFIG_FILE))
+
+        os.system(f'rm {tmp_file}')
+
     def start_program(self):
+        self._copy_config()
+        self._copy_drivers_to_remote()
+
+        self.logger.info("Starting program")
         out, err = self.ssh.execute(self.START_CMD, wait=False)
         waiting.wait(self.is_online, timeout_seconds=10, sleep_seconds=1)
         return out, err
 
     def stop_program(self):
+        self.logger.info("stopping program")
         self.ssh.execute(self.STOP_CMD)
         waiting.wait(lambda: not self.is_online())
 
-    def finalize(self):
-        self.logger.info("stopping program")
-
         self._recover_drivers()
 
+    def finalize(self):
         self.logger.debug("Stopping log reader")
         self.log_reader.stop()

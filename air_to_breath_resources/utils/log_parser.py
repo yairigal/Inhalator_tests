@@ -11,9 +11,10 @@ class LogReader:
     PORT = 7777
     SOCKET_TIMEOUT = 2
 
-    def __init__(self):
+    def __init__(self, port=PORT):
         self._reading = True
         self.buffer = ''
+        self.port = port
 
     def start_logger(self):
         self._reading = True
@@ -41,7 +42,7 @@ class LogReader:
     def log_socket(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(('0.0.0.0', self.PORT))
+        sock.bind(('0.0.0.0', self.port))
         return sock
 
     def clear_buffer(self):

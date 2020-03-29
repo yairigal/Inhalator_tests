@@ -1,6 +1,9 @@
+import json
+import os
 import socket
 import time
 from contextlib import contextmanager
+from pathlib import Path
 from threading import Thread
 
 
@@ -82,44 +85,48 @@ class BaseSensor:
 
 
 class SocketSensor:
-    LOW_BOUND = 0
-    HIGH_BOUND = 5
-    VALUE_TEMPLATE = NotImplemented
+    SOCKET = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    CONFIG_PATH = Path(os.getenv('PYTHONPATH')) / 'air_to_breath' / 'configs' / 'config.json'
+
     ERROR_TEMPLATE = NotImplemented
+    VALUE_TEMPLATE = NotImplemented
 
-    def __init__(self, host, port):
-        self.host = host
-        self.port = port
+    def name(self):
+        return NotImplemented
 
-        self.low_bound = self.LOW_BOUND
-        self.high_bound = self.HIGH_BOUND
+    @property
+    def _config_json(self):
+        with open(self.CONFIG_PATH) as f:
+            return json.load(f)
 
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    @property
+    def low_bound(self):
+        return self._config_json['threshold'][self.name]['min']
 
-    def set_value(self, sent_value: int):
+    @property
+    def high_bound(self):
+        return self._config_json['threshold'][self.name]['max']
+
+    @classmethod
+    def set_value(self, sent_value: int, host, port):
         if sent_value is None:
-            data = (self.HIGH_BOUND + self.LOW_BOUND) / 2
+            data = (self.high_bound + self.low_bound) / 2
 
         else:
             data = sent_value
 
         data_encoded = str(data).encode()
 
-        self.socket.sendto(data_encoded, (self.host, self.port))
+        self.SOCKET.sendto(data_encoded, (host, port))
         return data
 
     def check_error(self, value):
         """Check if there should be an error."""
         return not self.low_bound <= value <= self.high_bound
 
-    @property
-    def name(self):
-        raise NotImplemented
-
 
 class PressureSensor(SocketSensor):
-    LOW_BOUND = 0.3
-    HIGH_BOUND = 26.5
     VALUE_TEMPLATE = "Pressure: (.*)"
 
     @property
@@ -128,30 +135,14 @@ class PressureSensor(SocketSensor):
 
 
 class FlowSensor(SocketSensor):
-    LOW_BOUND = -0.5
-    HIGH_BOUND = 14.5
     VALUE_TEMPLATE = "Flow: (.*)"
 
     @property
     def name(self):
         return 'flow'
 
-    def set_value(self, sent_value: int):
-        if sent_value is None:
-            data = (self.HIGH_BOUND + self.LOW_BOUND) / 2
-
-        else:
-            data = sent_value
-
-        data_encoded = str(data).encode()
-
-        self.socket.sendto(data_encoded, (self.host, self.port))
-        return data
-
 
 class OxygenSensor(SocketSensor):
-    LOW_BOUND = 0
-    HIGH_BOUND = 5
     VALUE_TEMPLATE = "WRONGLINE"
 
     @property

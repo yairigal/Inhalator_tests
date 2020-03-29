@@ -1,10 +1,11 @@
-import re
+import time
 from itertools import cycle
 
 from rotest.core.block import TestBlock
 from rotest.core.flow_component import BlockInput
 from rotest.core.flow_component import BlockOutput
 
+from air_to_breath.tests.common import SENSORS
 from air_to_breath_resources.resources import AirToBreathSetup
 
 
@@ -26,24 +27,25 @@ class StopProgram(TestBlock):
 
 
 class ClearBuffer(TestBlock):
-    setup = BlockInput()
+    setup: AirToBreathSetup = BlockInput()
 
     def test_method(self):
         self.setup.log_reader.clear_buffer()
 
 
 class SetSensorsValues(TestBlock):
-    setup: AirToBreathSetup = BlockInput()
-    sent_values = BlockInput(default=cycle([None]))
     sensors = BlockInput()
     expected_values: dict = BlockInput()
+    setup: AirToBreathSetup = BlockInput()
+    sent_values = BlockInput(default=cycle([None]))
 
     def test_method(self):
         # TODO add feature to send couple of values to a sensor (like a sin wave) to simulate real scenario.
         for sensor, sent_value in zip(self.sensors, self.sent_values):
-            sensor_obj = getattr(self.setup, sensor)
-            value = sensor_obj.set_value(sent_value)
+            value = self.setup.set_value(sensor, sent_value)
             self.expected_values[sensor] = value
+
+        time.sleep(0.5)  # Wait for log to output.
 
 
 class ChangeSensorValueSimulation(TestBlock):
@@ -92,14 +94,12 @@ class NormalizeSensorValue(TestBlock):
 
 class ValidateSensors(TestBlock):
     setup: AirToBreathSetup = BlockInput()
-    sensors: list = BlockInput()
     expected_values: dict = BlockInput()
 
     def validate(self, sensor, expected_value):
-        template = getattr(self.setup, sensor).VALUE_TEMPLATE
-
+        template = SENSORS[sensor].VALUE_TEMPLATE
         value = self.setup.log_reader.search(template)
-        self.assertIsNotNone(value, f"Couldnt find {sensor} log line")
+        self.assertIsNotNone(value, f"Couldnt find `{sensor}` log line")
         self.assertEqual(float(value), expected_value, f"got value={value}, expected={expected_value}")
 
     def test_method(self):
@@ -110,10 +110,11 @@ class ValidateSensors(TestBlock):
 
 class ValidateSensorsError(TestBlock):
     setup: AirToBreathSetup = BlockInput()
-    sensors: list = BlockInput()
+
+    # sensors: list = BlockInput()
 
     def validate(self, sensor):
-        template = sensor.ERROR_TEMPLATE
+        template = getattr(self.setup, sensor).ERROR_TEMPLATE
 
         value = self.setup.log_reader.search(template)
         self.assertIsNotNone(value, f"Couldnt find {sensor} log line")
