@@ -22,19 +22,6 @@ class StopProgram(TestBlock):
         self.setup.stop_program()
 
 
-class ValidateLogValues(TestBlock):
-    setup: AirToBreathSetup = BlockInput()
-    sensor = BlockInput()
-    expected_value = BlockInput()
-
-    def test_method(self):
-        template = getattr(self, self.sensor).VALUE_TEMPLATE
-        log_line = self.setup.log_reader.search(template)
-        match = re.match(template, log_line)
-        self.assertIsNotNone(match, f"couldnt find {template} in {log_line}")
-        value = float(match.group(1))
-        self.assertEqual(value, self.expected_value, f"got value={value}, expected={self.expected_value}")
-
 
 class ClearBuffer(TestBlock):
     setup = BlockInput()

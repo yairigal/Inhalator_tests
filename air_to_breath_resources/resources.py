@@ -12,20 +12,21 @@ from air_to_breath_resources.utils.ssh import SSH
 
 
 class AirToBreathSetup(BaseResource):
-    RPI_IP = "192.168.43.165"
+    RPI_IP = "169.254.212.216"
 
     RP_USER = 'pi'
     RP_PASSWORD = 'raspberry'
 
     REPO = Path('/home/pi/Inhalator')
+    REMOTE_DRIVERS_PATH = REPO / 'drivers'
+
     LOG_FILE_PATH = Path('/tmp/atb_log')
-    CMD_LABEL = f'python3 {REPO}/main.py -vvv -s'
+    CMD_LABEL = f'python3 {REPO}/main.py -vvv'
     START_CMD = f'export DISPLAY=:0 && {CMD_LABEL} &> {LOG_FILE_PATH} &'
     STOP_CMD = 'pkill -f python3'
 
-    REMOTE_DRIVERS_PATH = REPO / 'drivers' / 'mocks'
-    REMOTE_PRESSURE_DRIVER = REMOTE_DRIVERS_PATH / 'mock_pressure_sensor.py'
-    REMOTE_FLOW_DRIVER = REMOTE_DRIVERS_PATH / 'mock_air_flow_sensor.py'
+    REMOTE_PRESSURE_DRIVER = REMOTE_DRIVERS_PATH / 'hce_pressure_sensor.py'
+    REMOTE_FLOW_DRIVER = REMOTE_DRIVERS_PATH / 'sfm3200_flow_sensor.py'
     REMOTE_OXYGEN_DRIVER = REMOTE_DRIVERS_PATH / ''  # TODO need to add when they are done
 
     OLD_PRESSURE_NAME = REMOTE_DRIVERS_PATH / 'pressure_old'
@@ -87,7 +88,6 @@ class AirToBreathSetup(BaseResource):
         # flow
         self.ssh.execute(f'mv {self.OLD_FLOW_NAME} {self.REMOTE_FLOW_DRIVER}')
         self.ssh.execute(f'rm {self.OLD_FLOW_NAME}')
-
 
     def connect(self):
         self.logger.debug("Starting log reader")

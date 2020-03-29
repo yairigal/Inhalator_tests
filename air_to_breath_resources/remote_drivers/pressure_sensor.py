@@ -5,7 +5,7 @@ PORT = 5555
 
 # THIS CODE SHOULD BE EXACTLY LIKE THE REMOTE DRIVER API
 
-class MockPressureSensor:
+class HcePressureSensor:
     def __init__(self):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -15,7 +15,7 @@ class MockPressureSensor:
 
         self.value = 0
 
-    def read_pressure(self):
+    def read(self):
         try:
             val = float(self._socket.recv(2 ** 16))
             self.value = val

@@ -2,7 +2,6 @@ from itertools import combinations
 
 from rotest.core.flow import TestFlow
 from rotest.core.flow_component import MODE_FINALLY
-from rotest.core.flow_component import Pipe
 
 from air_to_breath.blocks.blocks import ClearBuffer
 from air_to_breath.blocks.blocks import InitializeSensorValuesBlock
@@ -74,4 +73,4 @@ class PairsSanityFlow(TestFlow):
 class TripletsSanityFlow(TestFlow):
     setup = AirToBreathSetup.request()
 
-    blocks = [AbstractSanityFlow.params(sensors=[s1, s2]) for s1, s2 in combinations(SENSORS, 3)]
+    blocks = [AbstractSanityFlow.params(sensors=[s1, s2, s3]) for s1, s2, s3 in combinations(SENSORS, 3)]
