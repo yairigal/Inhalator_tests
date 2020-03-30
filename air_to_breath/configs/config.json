@@ -25,5 +25,6 @@
   "log_enabled": true,
   "graph_seconds": 12.0,
   "debug_port": 7878,
+  "mute_time_limit": 10,
   "ip": "192.168.43.159"
 }

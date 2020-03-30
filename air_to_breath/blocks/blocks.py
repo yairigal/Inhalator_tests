@@ -45,7 +45,7 @@ class SetSensorsValues(TestBlock):
             value = self.setup.set_value(sensor, sent_value)
             self.expected_values[sensor] = value
 
-        time.sleep(0.5)  # Wait for log to output.
+        time.sleep(0.5)  # Wait for program to sample
 
 
 class ChangeSensorValueSimulation(TestBlock):
@@ -98,7 +98,7 @@ class ValidateSensors(TestBlock):
 
     def validate(self, sensor, expected_value):
         template = SENSORS[sensor].VALUE_TEMPLATE
-        value = self.setup.log_reader.search(template)
+        value = self.setup.log_reader.wait_for_log(template)
         self.assertIsNotNone(value, f"Couldnt find `{sensor}` log line")
         self.assertEqual(float(value), expected_value, f"got value={value}, expected={expected_value}")
 
@@ -110,16 +110,30 @@ class ValidateSensors(TestBlock):
 
 class ValidateSensorsError(TestBlock):
     setup: AirToBreathSetup = BlockInput()
+    expected_values: dict = BlockInput()
 
-    # sensors: list = BlockInput()
+    CHECK_OPTIONS = [
+        'LOW',
+        'HIGH'
+    ]
 
-    def validate(self, sensor):
-        template = getattr(self.setup, sensor).ERROR_TEMPLATE
+    def validate(self, sensor, expected_value, what_to_check='LOW'):
+        if what_to_check == 'LOW':
+            template = SENSORS[sensor].LOW_ERROR_TEMPLATE
 
-        value = self.setup.log_reader.search(template)
-        self.assertIsNotNone(value, f"Couldnt find {sensor} log line")
+        elif what_to_check == 'HIGH':
+            template = SENSORS[sensor].HIGH_ERROR_TEMPLATE
+
+        self.logger.info(f"Validating `{template}` occured in log")
+        value = self.setup.log_reader.wait_for_log(template)
+        self.assertEqual(float(value), expected_value, f"Couldnt find {sensor} error log line")
 
     def test_method(self):
         for sensor, expected_value in self.expected_values.items():
-            if sensor.check_error(expected_value):
-                self.validate(sensor)
+            sensor_obj = SENSORS[sensor]
+            what_to_check = sensor_obj.check_error(expected_value)
+            if what_to_check is None:
+                self.logger.info(f"No need to check errors for {sensor}")
+
+            else:
+                self.validate(sensor, expected_value, what_to_check=what_to_check)

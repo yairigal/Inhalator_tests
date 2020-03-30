@@ -8,6 +8,7 @@ from air_to_breath.blocks.blocks import StartProgram
 from air_to_breath.blocks.blocks import ClearBuffer
 from air_to_breath.blocks.blocks import ValidateSensors
 from air_to_breath.blocks.blocks import StopProgram
+from air_to_breath.blocks.blocks import ValidateSensorsError
 from air_to_breath.tests.common import SENSORS
 from air_to_breath_resources.resources import AirToBreathSetup
 
@@ -21,7 +22,7 @@ class AbstractSanityFlow(TestFlow):
         ClearBuffer,
         SetSensorsValues,
         ValidateSensors,
-        # ValidateSensorsError,
+        ValidateSensorsError,
 
         # Teardown
         StopProgram.params(mode=MODE_FINALLY)

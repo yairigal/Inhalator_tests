@@ -8,7 +8,7 @@ from cached_property import cached_property
 
 
 class LogReader:
-    PORT = 7777
+    PORT = 7878
     SOCKET_TIMEOUT = 2
 
     def __init__(self, port=PORT):
@@ -55,6 +55,7 @@ class LogReader:
             return res[-1]
 
     def wait_for_log(self, regex, timeout=10, timeout_seconds=1):
-        return waiting.wait(lambda: self.search(regex) is not None,
-                            timeout_seconds=timeout,
-                            sleep_seconds=timeout_seconds)
+        waiting.wait(lambda: self.search(regex) is not None,
+                     timeout_seconds=timeout,
+                     sleep_seconds=timeout_seconds)
+        return self.search(regex)

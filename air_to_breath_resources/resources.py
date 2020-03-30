@@ -23,7 +23,7 @@ class AirToBreathSetup(BaseResource):
     START_CMD = f'export DISPLAY=:0 && {CMD_LABEL} &> {LOG_FILE_PATH} &'
     STOP_CMD = 'pkill -f python3'
 
-    REMOTE_PRESSURE_DRIVER = REMOTE_DRIVERS_PATH / 'hce_pressure_sensor.py'
+    REMOTE_PRESSURE_DRIVER = REMOTE_DRIVERS_PATH / 'abp_pressure_sensor.py'
     REMOTE_FLOW_DRIVER = REMOTE_DRIVERS_PATH / 'sfm3200_flow_sensor.py'
     REMOTE_OXYGEN_DRIVER = REMOTE_DRIVERS_PATH / ''  # TODO need to add when they are done
 

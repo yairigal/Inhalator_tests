@@ -87,8 +87,9 @@ class BaseSensor:
 class SocketSensor:
     CONFIG_PATH = Path(os.getenv('PYTHONPATH')) / 'air_to_breath' / 'configs' / 'config.json'
 
-    ERROR_TEMPLATE = NotImplemented
     VALUE_TEMPLATE = NotImplemented
+    LOW_ERROR_TEMPLATE = NotImplemented
+    HIGH_ERROR_TEMPLATE = NotImplemented
 
     def name(self):
         return NotImplemented
@@ -117,11 +118,17 @@ class SocketSensor:
 
     def check_error(self, value):
         """Check if there should be an error."""
-        return not self.low_bound <= value <= self.high_bound
+        if value < self.low_bound:
+            return 'LOW'
+
+        if value > self.high_bound:
+            return 'HIGH'
 
 
 class PressureSensor(SocketSensor):
     VALUE_TEMPLATE = "Pressure: (.*)"
+    LOW_ERROR_TEMPLATE = "Pressure low (.*)"
+    HIGH_ERROR_TEMPLATE = "Pressure high (.*)"
 
     @property
     def name(self):
@@ -134,6 +141,10 @@ class FlowSensor(SocketSensor):
     @property
     def name(self):
         return 'flow'
+
+    def check_error(self, value):
+        """Check if there should be an error."""
+        pass  # Seems like there is not going to be an error with the flow sensor.
 
 
 class OxygenSensor(SocketSensor):
