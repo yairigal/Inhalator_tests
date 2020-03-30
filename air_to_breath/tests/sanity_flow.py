@@ -20,7 +20,6 @@ class AbstractSanityFlow(TestFlow):
         StartProgram,
 
         ClearBuffer,
-        SetSensorsValues,
         ValidateSensors,
         ValidateSensorsError,
 

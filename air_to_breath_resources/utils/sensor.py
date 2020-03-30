@@ -116,13 +116,13 @@ class SocketSensor:
         self.socket.sendto(data_encoded, (host, port))
         return data
 
-    def check_error(self, value):
+    def is_exceeded(self, value):
         """Check if there should be an error."""
         if value < self.low_bound:
-            return 'LOW'
+            return self.LOW_ERROR_TEMPLATE
 
         if value > self.high_bound:
-            return 'HIGH'
+            return self.HIGH_ERROR_TEMPLATE
 
 
 class PressureSensor(SocketSensor):
@@ -137,18 +137,22 @@ class PressureSensor(SocketSensor):
 
 class FlowSensor(SocketSensor):
     VALUE_TEMPLATE = "Flow: (.*)"
+    LOW_ERROR_TEMPLATE = "Flow low (.*)"
+    HIGH_ERROR_TEMPLATE = "Flow high (.*)"
 
     @property
     def name(self):
         return 'flow'
 
-    def check_error(self, value):
+    def is_exceeded(self, value):
         """Check if there should be an error."""
         pass  # Seems like there is not going to be an error with the flow sensor.
 
 
 class OxygenSensor(SocketSensor):
-    VALUE_TEMPLATE = "WRONGLINE"
+    VALUE_TEMPLATE = "Oxygen: (.*)"
+    LOW_ERROR_TEMPLATE = "Oxygen low (.*)"
+    HIGH_ERROR_TEMPLATE = "Oxygen high (.*)"
 
     @property
     def name(self):

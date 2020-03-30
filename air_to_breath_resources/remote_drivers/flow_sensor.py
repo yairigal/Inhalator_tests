@@ -12,7 +12,7 @@ class Sfm3200:
         self._socket.bind(('0.0.0.0', PORT))
         self._socket.settimeout(0)
 
-        self.value = 0
+        self.value = 15
 
 
     def soft_reset(self):

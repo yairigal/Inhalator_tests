@@ -11,12 +11,16 @@ from air_to_breath_resources.resources import AirToBreathSetup
 
 class StartProgram(TestBlock):
     setup: AirToBreathSetup = BlockInput()
+    sensors: list = BlockInput()
 
     expected_values = BlockOutput()
 
     def test_method(self):
         self.setup.start_program()
         self.expected_values = {}
+        for sensor in self.sensors:
+            value = self.setup.set_value(sensor, None)
+            self.expected_values[sensor] = value
 
 
 class StopProgram(TestBlock):
@@ -117,23 +121,22 @@ class ValidateSensorsError(TestBlock):
         'HIGH'
     ]
 
-    def validate(self, sensor, expected_value, what_to_check='LOW'):
-        if what_to_check == 'LOW':
-            template = SENSORS[sensor].LOW_ERROR_TEMPLATE
-
-        elif what_to_check == 'HIGH':
-            template = SENSORS[sensor].HIGH_ERROR_TEMPLATE
-
-        self.logger.info(f"Validating `{template}` occured in log")
-        value = self.setup.log_reader.wait_for_log(template)
+    def validate(self, sensor, expected_value, error_template):
+        self.logger.info(f"Validating `{error_template}` occured in log")
+        value = self.setup.log_reader.wait_for_log(error_template)
         self.assertEqual(float(value), expected_value, f"Couldnt find {sensor} error log line")
+
+    def validate_no_errors(self, sensor):
+        sensor_obj = SENSORS[sensor]
+        for error_template in [sensor_obj.HIGH_ERROR_TEMPLATE, sensor_obj.LOW_ERROR_TEMPLATE]:
+            self.assertIsNone(self.setup.log_reader.search(error_template), f"Found ERROR in log for {sensor}")
 
     def test_method(self):
         for sensor, expected_value in self.expected_values.items():
             sensor_obj = SENSORS[sensor]
-            what_to_check = sensor_obj.check_error(expected_value)
-            if what_to_check is None:
-                self.logger.info(f"No need to check errors for {sensor}")
+            error_template_to_find = sensor_obj.is_exceeded(expected_value)
+            if error_template_to_find is None:
+                self.validate_no_errors(sensor)
 
             else:
-                self.validate(sensor, expected_value, what_to_check=what_to_check)
+                self.validate(sensor, expected_value, error_template=error_template_to_find)

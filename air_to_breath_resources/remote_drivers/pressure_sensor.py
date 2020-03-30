@@ -13,7 +13,7 @@ class AbpPressureSensor:
         self._socket.bind(('0.0.0.0', PORT))
         self._socket.settimeout(0)
 
-        self.value = 0
+        self.value = 15
 
     def read(self):
         try:

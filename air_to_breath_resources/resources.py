@@ -9,6 +9,8 @@ from rotest.management.base_resource import BaseResource
 from air_to_breath.tests.common import SENSORS
 from air_to_breath_resources.utils.log_parser import LogReader
 from air_to_breath_resources.utils.ssh import SSH
+from air_to_breath_resources.remote_drivers import flow_sensor
+from air_to_breath_resources.remote_drivers import pressure_sensor
 
 
 class AirToBreathSetup(BaseResource):
@@ -41,8 +43,8 @@ class AirToBreathSetup(BaseResource):
     REMOTE_CONFIG_FILE = REPO / 'config.json'
 
     SENSOR_TO_PORT = {
-        'pressure': 5555,
-        'flow': 6666,
+        'pressure': pressure_sensor.PORT,
+        'flow': flow_sensor.PORT,
         'oxygen': 7777
     }
 
@@ -55,8 +57,7 @@ class AirToBreathSetup(BaseResource):
         self.ssh = SSH(self.host, self.RP_USER, self.RP_PASSWORD)
 
     def set_value(self, sensor, value):
-        SENSORS[sensor].set_value(value, self.host, self.SENSOR_TO_PORT[sensor])
-        return value
+        return SENSORS[sensor].set_value(value, self.host, self.SENSOR_TO_PORT[sensor])
 
     def recover_config(self):
         self.ssh.execute(f'mv {self.OLD_CONFIG_FILE} {self.REMOTE_CONFIG_FILE}')
